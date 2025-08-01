@@ -80,11 +80,6 @@ orgo_scaffod/
 │   │   │   └── ffmpeg.py          # FFmpeg utility functions
 │   │   └── web/                   # Web UI
 │   │       └── index.html         # Dashboard interface
-├── tests/
-│   ├── unit/                      # Fast, credit-free tests
-│   └── integration/               # Tests requiring API credits
-│       ├── test_key_probe.py      # Keyboard event testing
-│       └── test_orgo_stream.py    # Full integration test
 ├── .env.example                   # Environment variables template
 ├── pyproject.toml                 # Project metadata and tool config
 └── README.md
@@ -182,36 +177,6 @@ curl -X POST http://localhost:8000/runs/<uuid>/accept
 ```
 </details>
 
-## Running Tests
-
-### Unit Tests (Fast, No API Credits)
-
-Run all unit tests:
-```bash
-pytest tests/unit/
-```
-
-Run a specific test:
-```bash
-pytest tests/unit/test_executor.py -v
-```
-
-### Integration Tests (Requires API Credits)
-
-Integration tests connect to the actual Orgo API and require environment flags:
-
-#### Screenshot Probe
-Tests screenshot capture functionality:
-```bash
-RUN_SCREENSHOT_PROBE=1 pytest tests/integration/test_screenshot_probe.py
-```
-
-#### Orgo Stream Test
-Full integration test with video capture:
-```bash
-RUN_ORGO_STREAM=1 pytest tests/integration/test_orgo_stream.py
-```
-
 ## Environment Variables
 
 Copy `.env.example` to `.env` and configure:
@@ -228,7 +193,6 @@ Copy `.env.example` to `.env` and configure:
 The project uses:
 - **Black** for code formatting
 - **Ruff** for linting
-- **pytest** for testing
 
 Install development dependencies:
 ```bash
