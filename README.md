@@ -1,6 +1,6 @@
 **Orgo Pilot**
 
-Orgo Pilot turns a URL (plus an optional one-line intent) into a fully recorded browser session and a set of ready-to-share artifacts.
+Orgo Pilot turns a URL, intent and optional further context into a fully recorded browser session and a set of ready-to-share artifacts.
 
 ---
 
