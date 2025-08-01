@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orgo Pilot</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            background-color: #0d1117;
+            color: #c9d1d9;
+        }
+        .container {
+            background: #161b22;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            border: 1px solid #30363d;
+        }
+        h1 {
+            color: #f0f6fc;
+            margin-bottom: 30px;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        label {
+            color: #c9d1d9;
+        }
+        input[type="url"], input[type="number"], textarea {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            box-sizing: border-box;
+            background-color: #0d1117;
+            color: #c9d1d9;
+        }
+        input[type="url"]:focus, input[type="number"]:focus, textarea:focus {
+            outline: none;
+            border-color: #58a6ff;
+            box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.3);
+        }
+        textarea {
+            resize: vertical;
+            font-family: inherit;
+        }
+        small {
+            display: block;
+            margin-top: 5px;
+            color: #8b949e;
+            font-size: 13px;
+        }
+        code {
+            background-color: #21262d;
+            padding: 2px 4px;
+            border-radius: 3px;
+            color: #79c0ff;
+        }
+        button {
+            background-color: #238636;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #2ea043;
+        }
+        button:disabled {
+            background-color: #21262d;
+            color: #484f58;
+            cursor: not-allowed;
+        }
+        #status {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #21262d;
+            border-radius: 4px;
+            display: none;
+            border: 1px solid #30363d;
+        }
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #21262d;
+            border-top: 3px solid #58a6ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        video {
+            width: 100%;
+            margin-top: 20px;
+            border-radius: 4px;
+            border: 1px solid #30363d;
+        }
+        .error {
+            color: #f85149;
+            margin-top: 10px;
+        }
+        a {
+            color: #58a6ff;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        li {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Orgo Pilot</h1>
+        
+        <div class="input-group">
+            <input type="url" id="urlInput" placeholder="https://example.com" value="https://example.com">
+        </div>
+        
+        <div class="input-group">
+            <label>Seconds per frame:
+                <input type="number" id="spfInput" min="0.05" step="0.05"
+                       value="0.10" style="width:120px">
+            </label>
+        </div>
+        
+        <div class="input-group">
+            <textarea id="intentInput" rows="2" placeholder="Intent (e.g. sign up and reach dashboard)"></textarea>
+        </div>
+        <div class="input-group">
+            <textarea id="contextInput" rows="2" placeholder='Optional context JSON e.g. {"email":"orgo@"}'></textarea>
+        </div>
+        
+        <button id="runButton" onclick="runTest()">Start Run</button>
+        
+        <div id="status"></div>
+    </div>
+
+    <script>
+        let pollInterval = null;
+        let currentRunId = null;
+        
+        async function runTest() {
+            const urlInput = document.getElementById('urlInput');
+            const runButton = document.getElementById('runButton');
+            const statusDiv = document.getElementById('status');
+            
+            const url = urlInput.value.trim();
+            if (!url) {
+                alert('Please enter a URL');
+                return;
+            }
+            
+            const spf = parseFloat(document.getElementById('spfInput').value) || 0.1;
+            
+            // Disable button during test
+            runButton.disabled = true;
+            
+            // Show initial status
+            statusDiv.style.display = 'block';
+            statusDiv.innerHTML = '<div class="spinner"></div> Starting run...';
+            
+            try {
+                // Create test
+                const response = await fetch('/runs', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        url,
+                        seconds_per_frame: spf,
+                        intent: document.getElementById('intentInput').value || null,
+                        context: (() => {
+                            try { return JSON.parse(document.getElementById('contextInput').value) }
+                            catch { return null }
+                        })()
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to create test');
+                }
+                
+                const data = await response.json();
+                const runId = data.id;
+                
+                // Start polling
+                pollStatus(runId);
+                
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+                runButton.disabled = false;
+            }
+        }
+        
+        async function pollStatus(runId) {
+            currentRunId = runId;
+            const statusDiv = document.getElementById('status');
+            const runButton = document.getElementById('runButton');
+            
+            async function poll() {
+                try {
+                    const response = await fetch(`/runs/${runId}`);
+                    if (!response.ok) {
+                        throw new Error('Failed to get status');
+                    }
+                    
+                    const run = await response.json();
+                    
+                    switch (run.status) {
+                        case 'PENDING':
+                            statusDiv.innerHTML = '<div class="spinner"></div> Waiting to start...';
+                            break;
+                        case 'RUNNING':
+                            statusDiv.innerHTML = '<div class="spinner"></div> Recording run...';
+                            break;
+                        case 'SUCCEEDED':
+                            clearInterval(pollInterval);
+                            statusDiv.innerHTML = `
+                                <div>✅ Outcome: ${run.outcome}</div>
+                                <video controls src="/artifacts/${runId}/video.mp4"></video>
+                                ${renderArtifacts(run)}
+                            `;
+                            runButton.disabled = false;
+                            break;
+
+                        case 'FAILED':
+                            clearInterval(pollInterval);
+                            statusDiv.innerHTML = `
+                                <div class="error">❌ Outcome: ${run.outcome}</div>
+                                ${run.log_url ? `<a href="${run.log_url}" target="_blank">ffmpeg.log</a><br>` : ''}
+                                ${renderArtifacts(run)}
+                            `;
+                            runButton.disabled = false;
+                            break;
+                        case 'ERROR':
+                            clearInterval(pollInterval);
+                            statusDiv.innerHTML = `
+                                <div class="error">❌ Run result: ${run.outcome || 'ERROR'}</div>
+                                ${run.log_url ? `<a href="${run.log_url}" target="_blank">ffmpeg.log</a><br>` : ''}
+                                ${renderArtifacts(run)}
+                            `;
+                            runButton.disabled = false;
+                            break;
+                    }
+                    
+                } catch (error) {
+                    clearInterval(pollInterval);
+                    statusDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+                    runButton.disabled = false;
+                }
+            }
+            
+            // Poll immediately
+            poll();
+            
+            // Then poll every 3 seconds
+            pollInterval = setInterval(poll, 3000);
+        }
+        
+        function renderArtifacts(run) {
+            if (!run.artifacts || !run.artifacts.length) return '';
+            return '<ul>' + run.artifacts.map(f =>
+                `<li><a href="/artifacts/${run.id}/${f}" target="_blank">${f}</a></li>`).join('') + '</ul>';
+        }
+        
+        async function acceptRun() {
+            await fetch(`/runs/${currentRunId}/accept`, {method: 'POST'});
+            document.getElementById('acceptBtn').style.display = 'none';
+            // re-poll once to refresh flag
+            pollStatus(currentRunId);
+        }
+    </script>
+</body>
+</html>
