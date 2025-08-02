@@ -10,7 +10,7 @@ Orgo Pilot turns a URL, intent and optional further context into a fully recorde
    POST to `/runs` (or click **Start Run**) with:
 
    * `url` — the page to open
-   * `intent` — free-text goal (optional)
+   * `intent` — free-text goal
    * `seconds_per_frame` — screenshot cadence
    * `context` — JSON blob passed straight to the agent (optional)
 
